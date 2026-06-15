@@ -8,6 +8,7 @@ import (
 	"github.com/ssrlive/proxypoolCheck/internal/cron"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 var configFilePath = ""
@@ -34,6 +35,13 @@ func main()  {
 	go app.InitApp()
 	log.Printf("The program will run every %v minutes\n", config.Config.CronInterval)
 	go cron.Cron()
+	go func() {
+		proxyAddr := ":" + strconv.Itoa(config.Config.ProxyPort)
+		log.Printf("Starting mixed proxy on %s\n", proxyAddr)
+		if err := app.StartMixedProxy(proxyAddr); err != nil {
+			log.Fatalf("Mixed proxy error: %s\n", err.Error())
+		}
+	}()
 	// Run
 	api.Run()
 

@@ -77,6 +77,11 @@ healthcheck_connection: # default 100
 speedtest:            # default false
 speed_connection:     # default 5
 speed_timeout:         # default 10
+
+retry_with_proxy: true     # 对直连失败的 server_url 用可用代理重试（默认 false）
+retry_max_proxies: 10      # 每个失败 URL 最多尝试几个代理（默认 10）
+
+proxy_port: 7890           # 本地混合代理端口，支持 SOCKS5 + HTTP CONNECT（默认 7890）
 ```
 
 需要修改的参数：
@@ -95,6 +100,37 @@ speed_timeout:         # default 10
 - `speed_timeout`：单个节点测速时间限制，默认值为 10，单位为秒。超过此时间限制的节点会测速失败
 - `healthcheck_timeout`：单个节点健康检测时间限制，默认值为 5，单位为秒。超过此时间限制的节点为无效节点
 - `healthcheck_connection`：节点健康检测并发连接数，默认值为 100。丢失大量可用节点时可大幅减少此项数值。
+- `retry_with_proxy`：是否用健康的代理节点重试直连失败的 server_url，默认关闭
+- `retry_max_proxies`：每个失败 URL 最多尝试使用几个可用代理去重试，默认 10
+- `proxy_port`：本地混合代理端口，默认 7890。支持 SOCKS5 和 HTTP CONNECT 两种协议
+
+
+### Web 代理选择器
+
+打开 `http://<domain>:<port>/` 即可看到仪表盘和代理列表：
+
+- **代理列表**：显示所有可用代理的名称、类型（SS/SSR/V2Ray/Trojan）和延迟
+- **选择代理**：点击"选择"按钮，将该代理设为本地混合代理端口的出口节点
+- **自动验证**：选择后自动测试连通性，页面显示连接结果（✅成功 / ❌失败）
+- **取消选择**：点击"取消选择"清除当前选择
+
+### API 接口
+
+| 方法 | 路由 | 说明 |
+|------|------|------|
+| GET | `/api/proxies` | 获取可用代理列表（名称、类型、延迟） |
+| GET | `/api/selected` | 获取当前选中的代理（未选择返回 null） |
+| POST | `/api/select` | 选择代理 `{"name":"..."}`，返回连接测试结果 |
+| POST | `/api/unselect` | 取消选择 |
+
+### 混合代理（SOCKS5 + HTTP CONNECT）
+
+程序启动后在 `proxy_port`（默认 7890）开启混合代理。通过 Web 页面选中一个节点后：
+
+- **SOCKS5**：浏览器/系统代理设为 `socks5://<domain>:7890`
+- **HTTP CONNECT**：设为 `http://<domain>:7890`
+
+所有流量将通过选中的代理节点转发。
 
 
 如果您的Web服务器端口与proxypoolCheck服务端口不同，应该将web服务器端口放在配置中，并且设置环境变量`PORT`以供proxypoolCheck服务。当您使用frp时，这将非常有帮助。

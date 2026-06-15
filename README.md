@@ -69,9 +69,41 @@ healthcheck_connection: # default 100
 speedtest:            # default false
 speed_timeout:         # default 10
 speed_connection:     # default 5
+
+retry_with_proxy: true     # retry failed server_url via healthy proxies (default false)
+retry_max_proxies: 10      # max proxy attempts per failed URL (default 10)
+
+proxy_port: 7890           # local mixed proxy (SOCKS5+HTTP) port (default 7890)
 ```
 
 If your web server port is not the same as proxypoolCheck serving port, you should put web server port in configuration, and set an environment variable `PORT` for proxypoolCheck to serve. This will be really helpful when you are doing frp.
+
+## Web Proxy Selector
+
+Open `http://<domain>:<port>/` in your browser to see the dashboard and proxy list.
+
+- **Proxy List**: Shows all available proxies with name, type (SS/SSR/V2Ray/Trojan) and delay
+- **Select Proxy**: Click "Select" on any proxy to set it as the outgoing proxy for the local mixed proxy port
+- **Auto-Test**: After selection, the program automatically tests connectivity and shows the result
+- **Unselect**: Click to clear the current selection
+
+## API Endpoints
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/api/proxies` | List all usable proxies with name, type, delay |
+| GET | `/api/selected` | Get currently selected proxy (null if none) |
+| POST | `/api/select` | Select a proxy (`{"name":"..."}`), returns connection test result |
+| POST | `/api/unselect` | Clear proxy selection |
+
+## Mixed Proxy (SOCKS5 + HTTP CONNECT)
+
+The program starts a local mixed proxy server on `proxy_port` (default 7890). Once a proxy is selected via the web UI:
+
+- **SOCKS5**: Configure your browser/system proxy as `socks5://<domain>:7890`
+- **HTTP CONNECT**: Configure as `http://<domain>:7890`
+
+All traffic will be routed through the selected proxy node.
 
 ```
 export PORT=ppcheckport

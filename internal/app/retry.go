@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/Dreamacro/clash/adapter"
 	C "github.com/Dreamacro/clash/constant"
@@ -31,6 +32,12 @@ func retryFailedURLs(failedURLs []string, usableProxies proxy.ProxyList) proxy.P
 
 	for _, urlStr := range failedURLs {
 		fetched := false
+		// Use a longer timeout for 2-hop retry
+		retryTimeout := time.Duration(config.Config.HealthCheckTimeout) * 3 * time.Second
+		if retryTimeout < 15*time.Second {
+			retryTimeout = 15 * time.Second
+		}
+
 		for i, p := range usableProxies {
 			if i >= maxTries {
 				log.Printf("Retry %s: reached max proxy attempts (%d)\n", urlStr, maxTries)
@@ -43,9 +50,10 @@ func retryFailedURLs(failedURLs []string, usableProxies proxy.ProxyList) proxy.P
 				continue
 			}
 
-			body, err := healthcheck.HTTPGetBodyViaProxy(cp, urlStr)
+			body, err := healthcheck.HTTPGetBodyViaProxyWithTime(cp, urlStr, retryTimeout)
 			if err != nil {
-				log.Printf("Retry %s via %s failed: %s\n", urlStr, p.BaseInfo().Name, err.Error())
+				log.Printf("Retry %s via %s failed (%ds timeout): %s\n",
+					urlStr, p.BaseInfo().Name, int(retryTimeout.Seconds()), err.Error())
 				continue
 			}
 

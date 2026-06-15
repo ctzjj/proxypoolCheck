@@ -20,3 +20,5 @@ speed_timeout:          # default 10
 
 retry_with_proxy: true      # 对直连失败的 server_url 用可用代理重试
 retry_max_proxies: 10       # 每个失败 URL 最多尝试几个代理
+
+proxy_port: 7890            # local mixed proxy port, default 7890
