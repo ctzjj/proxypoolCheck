@@ -24,6 +24,8 @@ type ConfigOptions struct {
 	SpeedTest          bool     `json:"speedtest" yaml:"speedtest"`
 	SpeedConnection    int      `json:"speed_connection" yaml:"speed_connection"`
 	SpeedTimeout       int      `json:"speed_timeout" yaml:"speed_timeout"`
+	RetryWithProxy     bool     `json:"retry_with_proxy" yaml:"retry_with_proxy"`
+	RetryMaxProxies    int      `json:"retry_max_proxies" yaml:"retry_max_proxies"`
 }
 
 var Config ConfigOptions
@@ -71,6 +73,9 @@ func Parse(path string) error {
 	}
 	if Config.SpeedTimeout == 0 {
 		Config.SpeedTimeout = 10
+	}
+	if Config.RetryMaxProxies == 0 {
+		Config.RetryMaxProxies = 10
 	}
 	return nil
 }

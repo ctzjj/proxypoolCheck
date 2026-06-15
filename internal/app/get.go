@@ -13,16 +13,15 @@ import (
 	"time"
 )
 
-func getAllProxies() (proxy.ProxyList, error) {
+func getAllProxies() (proxies proxy.ProxyList, failedURLs []string, retErr error) {
 	var proxylist proxy.ProxyList
-	var errs []error // collect errors
 
 	for _, value := range config.Config.ServerUrl {
 		url := formatURL(value)
 		pjson, err := getProxies(url)
 		if err != nil {
 			log.Printf("Error when fetch %s: %s\n", url, err.Error())
-			errs = append(errs, err)
+			failedURLs = append(failedURLs, url)
 			continue
 		}
 		log.Printf("Get %s line count: %d\n", url, len(pjson))
@@ -36,7 +35,6 @@ func getAllProxies() (proxy.ProxyList, error) {
 			if pp, ok := convert2Proxy(p); ok {
 				if i == 1 && pp.BaseInfo().Name == "NULL" {
 					log.Println("no proxy on " + url)
-					errs = append(errs, errors.New("no proxy on "+url))
 					continue
 				}
 				if config.Config.ShowRemoteSpeed == true {
@@ -49,16 +47,9 @@ func getAllProxies() (proxy.ProxyList, error) {
 	}
 
 	if proxylist == nil {
-		if errs != nil {
-			errInfo := "\n"
-			for _, e := range errs {
-				errInfo = errInfo + e.Error() + ";\n"
-			}
-			return nil, errors.New(errInfo)
-		}
-		return nil, errors.New("no proxy")
+		return nil, failedURLs, errors.New("no proxy fetched from any server")
 	}
-	return proxylist, nil
+	return proxylist, failedURLs, nil
 }
 
 func formatURL(value string) string {
