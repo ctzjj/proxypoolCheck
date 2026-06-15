@@ -41,14 +41,15 @@ func InitApp() error{
 		log.Printf("Phase 2: retrying %d failed URL(s) with %d usable proxy(ies)\n", len(failedURLs), len(proxies))
 		newProxies := retryFailedURLs(failedURLs, proxies)
 		if len(newProxies) > 0 {
-			log.Printf("Phase 2: got %d new proxies, merging and re-checking\n", len(newProxies))
-			proxies = append(proxies, newProxies...)
-			proxies = proxies.Derive().Deduplication()
-			updateProxyStats(proxies)
-			log.Println("After merge, total proxies:", cache.AllProxiesCount)
-
-			log.Println("Running health check on merged pool...")
-			proxies = healthcheck.CleanBadProxiesWithGrpool(proxies)
+			log.Printf("Phase 2: got %d new proxies, health checking only new ones\n", len(newProxies))
+			newProxies = healthcheck.CleanBadProxiesWithGrpool(newProxies)
+			log.Printf("Phase 2: %d new proxies passed health check\n", len(newProxies))
+			if len(newProxies) > 0 {
+				proxies = append(proxies, newProxies...)
+				proxies = proxies.Derive().Deduplication()
+				updateProxyStats(proxies)
+				log.Println("After merge, total proxies:", cache.AllProxiesCount)
+			}
 		}
 	}
 
