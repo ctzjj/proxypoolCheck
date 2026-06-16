@@ -273,6 +273,28 @@ func setupRouter() {
 		app.UnselectProxy()
 		c.JSON(http.StatusOK, gin.H{"selected": false})
 	})
+
+	router.GET("/api/strategy", func(c *gin.Context) {
+		strat := app.GetRuleManager().GetStrategy()
+		c.JSON(http.StatusOK, gin.H{"strategy": strat})
+	})
+
+	router.POST("/api/strategy", func(c *gin.Context) {
+		var req struct {
+			Strategy string `json:"strategy"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			return
+		}
+		if req.Strategy != "china_bypass" && req.Strategy != "all_proxy" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid strategy"})
+			return
+		}
+		app.GetRuleManager().SetStrategy(req.Strategy)
+		app.SaveStrategy(req.Strategy)
+		c.JSON(http.StatusOK, gin.H{"strategy": req.Strategy})
+	})
 }
 
 func Run() {
@@ -326,7 +348,7 @@ func injectDrawer(path string) {
 	html := `<div class="ov" id="ov" onclick="closeDrawer()"></div>
 <div class="drawer-tab" id="dt" onclick="toggleDrawer()">代理 ▸</div>
 <div class="drawer" id="dr">
-<div class="drawer-header"><span>代理选择器</span><button class="close-btn" onclick="closeDrawer()">✕</button></div>
+<div class="drawer-header"><span>Clash</span><button class="close-btn" onclick="closeDrawer()">✕</button></div>
 <div class="drawer-body">
 <label>当前选中</label>
 <div id="sel-info" class="st-box"><span class="st-idle">未选择</span></div>
@@ -334,16 +356,22 @@ func injectDrawer(path string) {
 <select id="sel"><option value="">— 请选择 —</option></select>
 <div class="btn-row"><button class="btn-sel" id="btn-sel" onclick="doSel()">选择</button><button class="btn-uns" id="btn-uns" onclick="doUnsel()">取消选择</button></div>
 <div id="test-r" class="st-box" style="display:none"><div class="lb">连接测试</div><div id="test-t"></div></div>
+<label>路由策略</label>
+<select id="strategy" onchange="doStrategy()">
+<option value="china_bypass">绕过国内 IP</option>
+<option value="all_proxy">全部转发</option>
+</select>
 <div class="btn-row"><button class="btn-ref" onclick="loadDrawer()">🔄 刷新列表</button></div>
 <div style="font-size:12px;color:#999" id="dr-time"></div>
 </div></div>
 <script>
-function toggleDrawer(){var d=document.getElementById('dr'),t=document.getElementById('dt'),o=document.getElementById('ov'),is=d.classList.toggle('open');t.classList.toggle('open');o.classList.toggle('show');t.textContent=is?'▸':'代理 ▸';if(is)loadDrawer()}
-function closeDrawer(){document.getElementById('dr').classList.remove('open');document.getElementById('dt').classList.remove('open');document.getElementById('ov').classList.remove('show');document.getElementById('dt').textContent='代理 ▸'}
-async function loadDrawer(){document.getElementById('dr-time').textContent='加载中...';try{var r=await Promise.all([fetch('/api/proxies').then(function(x){return x.json()}),fetch('/api/selected').then(function(x){return x.json()})]);renderDr(r[0],r[1])}catch(e){}document.getElementById('dr-time').textContent='更新于 '+new Date().toLocaleTimeString()}
-function renderDr(px,sel){var s=document.getElementById('sel'),sn=sel&&sel.selected?sel.name:'';s.innerHTML='<option value="">— 请选择 —</option>'+(px||[]).map(function(p){return'<option value="'+eA(p.name)+'"'+(p.name===sn?' selected':'')+'>'+eH(p.name)+' ['+eH(p.type)+'] '+p.port+' '+(p.delay>0?p.delay+'ms':'-')+'</option>'}).join('');var d=document.getElementById('sel-info');if(!sel||!sel.selected){d.innerHTML='<span class="st-idle">未选择</span>'}else{d.innerHTML='<span class="st-ok">✅ '+eH(sel.name)+'</span>'+(sel.delay>0?' <span style="color:#aaa">('+sel.delay+'ms)</span>':'')}}
+function toggleDrawer(){var d=document.getElementById('dr'),t=document.getElementById('dt'),o=document.getElementById('ov'),is=d.classList.toggle('open');t.classList.toggle('open');o.classList.toggle('show');t.textContent=is?'▸':'Clash ▸';if(is)loadDrawer()}
+function closeDrawer(){document.getElementById('dr').classList.remove('open');document.getElementById('dt').classList.remove('open');document.getElementById('ov').classList.remove('show');document.getElementById('dt').textContent='Clash ▸'}
+async function loadDrawer(){document.getElementById('dr-time').textContent='加载中...';try{var r=await Promise.all([fetch('/api/proxies').then(function(x){return x.json()}),fetch('/api/selected').then(function(x){return x.json()}),fetch('/api/strategy').then(function(x){return x.json()})]);renderDr(r[0],r[1],r[2])}catch(e){}document.getElementById('dr-time').textContent='更新于 '+new Date().toLocaleTimeString()}
+function renderDr(px,sel,strat){var s=document.getElementById('sel'),sn=sel&&sel.selected?sel.name:'';s.innerHTML='<option value="">— 请选择 —</option>'+(px||[]).map(function(p){return'<option value="'+eA(p.name)+'"'+(p.name===sn?' selected':'')+'>'+eH(p.name)+' ['+eH(p.type)+'] '+p.port+' '+(p.delay>0?p.delay+'ms':'-')+'</option>'}).join('');var d=document.getElementById('sel-info');if(!sel||!sel.selected){d.innerHTML='<span class="st-idle">未选择</span>'}else{d.innerHTML='<span class="st-ok">✅ '+eH(sel.name)+'</span>'+(sel.delay>0?' <span style="color:#aaa">('+sel.delay+'ms)</span>':'')};if(strat&&strat.strategy)document.getElementById('strategy').value=strat.strategy}
 function doSel(){var s=document.getElementById('sel');if(!s.value)return;document.getElementById('btn-sel').disabled=true;document.getElementById('btn-uns').disabled=true;fetch('/api/select',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:s.value})}).then(function(r){return r.json()}).then(function(r){var tr=document.getElementById('test-r'),tt=document.getElementById('test-t');tr.style.display='block';tt.innerHTML=r.status==='connected'?'<span class="st-ok">✅ 已连接</span>'+(r.delay>0?' ('+r.delay+'ms)':''):'<span class="st-fail">❌ 连接失败</span>'+(r.error?': '+r.error:'');loadDrawer();document.getElementById('btn-sel').disabled=false;document.getElementById('btn-uns').disabled=false})}
 function doUnsel(){document.getElementById('btn-sel').disabled=true;document.getElementById('btn-uns').disabled=true;fetch('/api/unselect',{method:'POST'}).then(function(){document.getElementById('test-r').style.display='none';document.getElementById('btn-sel').disabled=false;document.getElementById('btn-uns').disabled=false;loadDrawer()})}
+function doStrategy(){var s=document.getElementById('strategy').value;fetch('/api/strategy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({strategy:s})})}
 function eH(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function eA(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 </script>`
