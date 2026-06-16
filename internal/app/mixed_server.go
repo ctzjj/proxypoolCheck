@@ -100,6 +100,18 @@ func dialSelectedProxy(meta *C.Metadata) (net.Conn, error) {
 	return cp.DialContext(ctx, meta)
 }
 
+func dialSelectedOrDirect(host, portStr string) (net.Conn, error) {
+	addr := net.JoinHostPort(host, portStr)
+	if GetRuleManager().ShouldDirect(addr) {
+		return net.DialTimeout("tcp", addr, 10*time.Second)
+	}
+	meta, err := resolveTarget(host, portStr)
+	if err != nil {
+		return nil, err
+	}
+	return dialSelectedProxy(meta)
+}
+
 // --- SOCKS5 ---
 
 func handleSOCKS5(conn net.Conn, br *bufio.Reader) {
@@ -163,12 +175,7 @@ func handleSOCKS5(conn net.Conn, br *bufio.Reader) {
 	port := binary.BigEndian.Uint16(portBytes)
 	portStr := strconv.Itoa(int(port))
 
-	meta, err := resolveTarget(host, portStr)
-	if err != nil {
-		return
-	}
-
-	target, err := dialSelectedProxy(meta)
+	target, err := dialSelectedOrDirect(host, portStr)
 	if err != nil {
 		log.Printf("SOCKS5 dial error: %s\n", err.Error())
 		conn.Write([]byte{0x05, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
@@ -206,12 +213,7 @@ func handleHTTP(conn net.Conn, br *bufio.Reader) {
 		return
 	}
 
-	meta, err := resolveTarget(host, portStr)
-	if err != nil {
-		return
-	}
-
-	target, err := dialSelectedProxy(meta)
+	target, err := dialSelectedOrDirect(host, portStr)
 	if err != nil {
 		log.Printf("HTTP CONNECT dial error: %s\n", err.Error())
 		conn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
