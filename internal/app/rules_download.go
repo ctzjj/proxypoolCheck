@@ -65,7 +65,19 @@ func (rm *RuleManager) LoadCache() {
 }
 
 func downloadWithRetry(url string, proxies proxy.ProxyList) ([]byte, error) {
-	// First try: download via proxies
+	// First try: direct download
+	log.Printf("  direct download %s", url)
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(url)
+	if err == nil {
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err == nil && len(body) > 100 {
+			return body, nil
+		}
+	}
+
+	// Fallback: download via proxies
 	maxTries := config.Config.RetryMaxProxies
 	if maxTries <= 0 {
 		maxTries = 10
@@ -89,18 +101,6 @@ func downloadWithRetry(url string, proxies proxy.ProxyList) ([]byte, error) {
 		}
 		if err != nil {
 			log.Printf("  download via %s failed: %v", p.BaseInfo().Name, err)
-		}
-	}
-
-	// Fallback: direct download
-	log.Printf("  direct download fallback for %s", url)
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Get(url)
-	if err == nil {
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err == nil && len(body) > 100 {
-			return body, nil
 		}
 	}
 

@@ -33,3 +33,8 @@ docker/*
 assets/html/*
 assets/css/*
 
+# runtime artifacts
+data/*
+state/*
+dist/*
+

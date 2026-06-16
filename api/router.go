@@ -346,7 +346,7 @@ func injectDrawer(path string) {
 </style>`
 
 	html := `<div class="ov" id="ov" onclick="closeDrawer()"></div>
-<div class="drawer-tab" id="dt" onclick="toggleDrawer()">代理 ▸</div>
+<div class="drawer-tab" id="dt" onclick="toggleDrawer()">Clash ▸</div>
 <div class="drawer" id="dr">
 <div class="drawer-header"><span>Clash</span><button class="close-btn" onclick="closeDrawer()">✕</button></div>
 <div class="drawer-body">
@@ -358,7 +358,7 @@ func injectDrawer(path string) {
 <div id="test-r" class="st-box" style="display:none"><div class="lb">连接测试</div><div id="test-t"></div></div>
 <label>路由策略</label>
 <select id="strategy" onchange="doStrategy()">
-<option value="china_bypass">绕过国内 IP</option>
+<option value="china_bypass">绕过国内</option>
 <option value="all_proxy">全部转发</option>
 </select>
 <div class="btn-row"><button class="btn-ref" onclick="loadDrawer()">🔄 刷新列表</button></div>
