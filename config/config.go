@@ -11,6 +11,11 @@ import (
 
 var configFilePath = "config.yaml"
 
+type RuleProvidersConfig struct {
+	ChinaDomain []string `json:"china_domain" yaml:"china_domain"`
+	ChinaIP     []string `json:"china_ip" yaml:"china_ip"`
+}
+
 // ConfigOptions is a struct that represents config files
 type ConfigOptions struct {
 	ServerUrl          []string `json:"server_url" yaml:"server_url"`
@@ -26,7 +31,9 @@ type ConfigOptions struct {
 	SpeedTimeout       int      `json:"speed_timeout" yaml:"speed_timeout"`
 	RetryWithProxy     bool     `json:"retry_with_proxy" yaml:"retry_with_proxy"`
 	RetryMaxProxies    int      `json:"retry_max_proxies" yaml:"retry_max_proxies"`
-	ProxyPort          int      `json:"proxy_port" yaml:"proxy_port"`
+	ProxyPort          int                `json:"proxy_port" yaml:"proxy_port"`
+	RouteStrategy      string             `json:"route_strategy" yaml:"route_strategy"`
+	RuleProviders      RuleProvidersConfig `json:"rule_providers" yaml:"rule_providers"`
 }
 
 var Config ConfigOptions
@@ -80,6 +87,19 @@ func Parse(path string) error {
 	}
 	if Config.ProxyPort == 0 {
 		Config.ProxyPort = 7890
+	}
+	if Config.RouteStrategy == "" {
+		Config.RouteStrategy = "china_bypass"
+	}
+	if len(Config.RuleProviders.ChinaDomain) == 0 {
+		Config.RuleProviders.ChinaDomain = []string{
+			"https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/China/China_Domain.txt",
+		}
+	}
+	if len(Config.RuleProviders.ChinaIP) == 0 {
+		Config.RuleProviders.ChinaIP = []string{
+			"https://raw.githubusercontent.com/17mon/china_ip_list/master/china_ip_list.txt",
+		}
 	}
 	return nil
 }
