@@ -15,6 +15,11 @@ var location = time.FixedZone("CST", 8*3600)
 
 // Get all usable proxies from proxypool server and set app vars
 func InitApp() error{
+	// Load cached rules and persisted strategy
+	GetRuleManager().LoadCache()
+	LoadStrategy()
+	log.Printf("Route strategy: %s", GetRuleManager().GetStrategy())
+
 	// healthcheck settings
 	healthcheck.DelayConn = config.Config.HealthCheckConnection
 	healthcheck.DelayTimeout = time.Duration(config.Config.HealthCheckTimeout) * time.Second
@@ -52,6 +57,11 @@ func InitApp() error{
 			}
 		}
 	}
+
+	// Phase 3: Download rule-provider files using usable proxies
+	log.Println("Phase 3: downloading rule providers...")
+	GetRuleManager().DownloadAndLoad(proxies)
+	log.Println("Phase 3: rule providers loaded")
 
 	log.Println("Final usable proxy count: ", len(proxies))
 
