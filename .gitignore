@@ -20,6 +20,9 @@ tmp/*
 # dep
 vendor
 
+# docker
+docker/*
+
 # GoLand
 .idea/*
 
